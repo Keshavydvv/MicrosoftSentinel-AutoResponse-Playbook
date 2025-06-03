@@ -1,0 +1,147 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "Microsoft_Sentinel_alert": {
+                "type": "ApiConnectionWebhook",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                        }
+                    },
+                    "body": {
+                        "callback_url": "@listCallbackUrl()"
+                    },
+                    "path": "/subscribe"
+                },
+                "runtimeConfiguration": {
+                    "secureData": {
+                        "properties": [
+                            "inputs",
+                            "outputs"
+                        ]
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Condition": {
+                "type": "If",
+                "expression": {
+                    "or": [
+                        {
+                            "contains": [
+                                "@triggerBody()?['Entities']?[0]?['FileName']",
+                                "Decoy-Invoice.docx"
+                            ]
+                        }
+                    ]
+                },
+                "actions": {
+                    "Extract_IncidentDetails": {
+                        "type": "Compose",
+                        "inputs": "triggerBody()?['Entities']?[0]?['AzureResourceId']\n"
+                    },
+                    "Extract_MachineID": {
+                        "type": "Compose",
+                        "inputs": "triggerBody()?['Entities']?[0]?['ProcessId']\n",
+                        "runAfter": {
+                            "Extract_IncidentDetails": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Extract_ProcessName": {
+                        "type": "Compose",
+                        "inputs": "triggerBody()?['Entities']?[0]?['FileName']\n",
+                        "runAfter": {
+                            "Extract_MachineID": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Get_IncidentDetails": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://login.microsoftonline.com/c62fa62f-1c49-4c53-a34d-32454897745c/oauth2/v2.0/token",
+                            "method": "POST",
+                            "headers": {
+                                "Content-Type": "application/x-www-form-urlencoded"
+                            },
+                            "body": "grant_type=client_credentials&client_id=6df05a72-0ad1-44ab-9ce9-e291210198d1&client_secret=Zv8QQ~ISvjOkEGsYHnN4sFFtnXm_xEUejUugKaCx&scope=https://api.securitycenter.microsoft.com/.default\n"
+                        },
+                        "runAfter": {
+                            "Extract_ProcessName": [
+                                "Succeeded"
+                            ]
+                        },
+                        "runtimeConfiguration": {
+                            "contentTransfer": {
+                                "transferMode": "Chunked"
+                            }
+                        }
+                    },
+                    "Log_SuccessfulStop": {
+                        "type": "Compose",
+                        "inputs": "Honeypot triggered. Suspicious process was automatically stopped by HoneyTrap playbook.\n",
+                        "runAfter": {
+                            "Get_IncidentDetails": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Stop_Process": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "@concat('https://api.securitycenter.microsoft.com/api/machines/', outputs('Extract_MachineID'), '/stopProcess')",
+                            "method": "POST",
+                            "headers": {
+                                "Content-Type": "application/json",
+                                "Authorization": "@concat('Bearer ', body('Get_IncidentDetails')?['access_token'])"
+                            },
+                            "body": {
+                                "Comment": "Triggered from HoneyTrap playbook",
+                                "ProcessName": "@outputs('Extract_ProcessName')"
+                            }
+                        },
+                        "runAfter": {
+                            "Log_SuccessfulStop": [
+                                "Succeeded"
+                            ]
+                        }
+                    }
+                },
+                "else": {
+                    "actions": {
+                        "Log_ConditionFalse": {
+                            "type": "Compose",
+                            "inputs": "No honeypot file or matching process found. Playbook skipped action.\n"
+                        }
+                    }
+                },
+                "runAfter": {}
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "type": "Object",
+            "value": {
+                "azuresentinel": {
+                    "id": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/providers/Microsoft.Web/locations/eastus/managedApis/azuresentinel",
+                    "connectionId": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/resourceGroups/resourceGroup(EASTUS)/providers/Microsoft.Web/connections/azuresentinel",
+                    "connectionName": "azuresentinel"
+                }
+            }
+        }
+    }
+}

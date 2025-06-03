@@ -1,0 +1,243 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "Microsoft_Sentinel_incident": {
+                "type": "ApiConnectionWebhook",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                        }
+                    },
+                    "body": {
+                        "callback_url": "@{listCallbackUrl()}"
+                    },
+                    "path": "/incident-creation"
+                }
+            }
+        },
+        "actions": {
+            "Get_incident": {
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "body": {
+                        "incidentArmId": "@triggerBody()?['object']?['id']"
+                    },
+                    "path": "/Incidents"
+                },
+                "runAfter": {}
+            },
+            "Entities_-_Get_IPs": {
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                    "path": "/entities/ip"
+                },
+                "runAfter": {
+                    "Get_incident": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "For_each": {
+                "type": "Foreach",
+                "foreach": "@body('Entities_-_Get_IPs')?['IPs']",
+                "actions": {
+                    "Condition": {
+                        "type": "If",
+                        "expression": {
+                            "and": [
+                                {
+                                    "equals": [
+                                        "Type",
+                                        "ip"
+                                    ]
+                                }
+                            ]
+                        },
+                        "actions": {
+                            "HTTP": {
+                                "type": "Http",
+                                "inputs": {
+                                    "uri": "https://api.security.microsoft.com/api/indicators",
+                                    "method": "POST",
+                                    "headers": {
+                                        "Content-Type": "application/json",
+                                        "Authorization": "Bearer <ACCESS_TOKEN>"
+                                    },
+                                    "body": {
+                                        "indicatorType": "IpAddress",
+                                        "action": "Block",
+                                        "severity": "High",
+                                        "value": "@{items('For_each')?['Address']}",
+                                        "title": "Auto-blocked IP from Sentinel",
+                                        "description": "Automatically blocked by Logic App playbook",
+                                        "expirationTime": "2025-12-31T23:59:59Z"
+                                    }
+                                },
+                                "runtimeConfiguration": {
+                                    "contentTransfer": {
+                                        "transferMode": "Chunked"
+                                    }
+                                }
+                            },
+                            "Send_an_email_(V2)": {
+                                "type": "ApiConnection",
+                                "inputs": {
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['outlook']['connectionId']"
+                                        }
+                                    },
+                                    "method": "post",
+                                    "body": {
+                                        "To": "keshavyadav2004@icloud.com",
+                                        "Subject": "IP Blocked – Sentinel Alert: @{triggerBody()?['data']?['essentials']?['alertRule']}",
+                                        "Body": "<p class=\"editor-paragraph\">&lt;h3&gt;🚨 Sentinel Incident Alert – IP Blocked&lt;/h3&gt;<br><br>&lt;b&gt;Incident Title:&lt;/b&gt; @{outputs('Get_incident')?['body']?['properties']?['title']}&lt;br&gt;<br>&lt;b&gt;Severity:&lt;/b&gt; @{outputs('Get_incident')?['body']?['properties']?['severity']}&lt;br&gt;<br>&lt;b&gt;Detected IP:&lt;/b&gt; @{items('For_each')?['Address']}&lt;br&gt;<br>&lt;b&gt;Action Taken:&lt;/b&gt; ✅ IP blocked via Microsoft Defender&lt;br&gt;<br>&lt;b&gt;Incident Link:&lt;/b&gt; &lt;a href=\"@{outputs('Get_incident')?['body']?['properties']?['incidentUrl']}\"&gt;View in Sentinel&lt;/a&gt;&lt;br&gt;<br><br>&lt;hr&gt;<br>&lt;p&gt;Please investigate and escalate if needed.&lt;/p&gt;</p><br>",
+                                        "Importance": "Normal"
+                                    },
+                                    "path": "/v2/Mail"
+                                },
+                                "runAfter": {
+                                    "HTTP": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Add_comment_to_incident_(V3)": {
+                                "type": "ApiConnection",
+                                "inputs": {
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                        }
+                                    },
+                                    "method": "post",
+                                    "body": {
+                                        "incidentArmId": "@body('Get_incident')?['id']",
+                                        "message": "<p class=\"editor-paragraph\">[Auto-Response] IP address @{items('For_each')?['Address']} was automatically blocked via Defender for Endpoint based on high-severity Sentinel incident: @{outputs('Get_incident')?['body']?['properties']?['title']}.</p><br>"
+                                    },
+                                    "path": "/Incidents/Comment"
+                                },
+                                "runAfter": {
+                                    "Send_an_email_(V2)": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Update_incident": {
+                                "type": "ApiConnection",
+                                "inputs": {
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                        }
+                                    },
+                                    "method": "put",
+                                    "body": {
+                                        "incidentArmId": "@body('Get_incident')?['id']",
+                                        "tagsToAdd": {
+                                            "TagsToAdd": [
+                                                {
+                                                    "Tag": "AutoBlocked\n"
+                                                },
+                                                {
+                                                    "Tag": "Playbook-AI"
+                                                }
+                                            ]
+                                        },
+                                        "ownerAction": "Assign",
+                                        "owner": "keshavyadav2004@icloud.com",
+                                        "severity": "High",
+                                        "status": "Closed"
+                                    },
+                                    "path": "/Incidents"
+                                },
+                                "runAfter": {
+                                    "Add_comment_to_incident_(V3)": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            }
+                        },
+                        "else": {
+                            "actions": {
+                                "Append_to_string_variable": {
+                                    "type": "AppendToStringVariable",
+                                    "inputs": {
+                                        "name": "SkippedEntities",
+                                        "value": "Skipped entity: Type=@{items('For_each')?['Type']} - Value=@{items('For_each')?['Address']}\\n\n"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "runAfter": {
+                    "Initialize_variables": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Initialize_variables": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "SkippedEntities",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Entities_-_Get_IPs": [
+                        "Succeeded"
+                    ]
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "type": "Object",
+            "value": {
+                "azuresentinel": {
+                    "id": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/providers/Microsoft.Web/locations/centralindia/managedApis/azuresentinel",
+                    "connectionId": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/resourceGroups/rg1/providers/Microsoft.Web/connections/azuresentinel-Auto_Block_IP_Send_Email",
+                    "connectionName": "azuresentinel-Auto_Block_IP_Send_Email",
+                    "connectionProperties": {
+                        "authentication": {
+                            "type": "ManagedServiceIdentity"
+                        }
+                    }
+                },
+                "outlook": {
+                    "id": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/providers/Microsoft.Web/locations/centralindia/managedApis/outlook",
+                    "connectionId": "/subscriptions/fcc87e3e-5bb4-49cc-b394-4ab5527bdc2d/resourceGroups/rg1/providers/Microsoft.Web/connections/outlook",
+                    "connectionName": "outlook"
+                }
+            }
+        }
+    }
+}
