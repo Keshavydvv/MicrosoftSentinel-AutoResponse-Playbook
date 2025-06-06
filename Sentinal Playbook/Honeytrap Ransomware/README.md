@@ -4,7 +4,7 @@ This Microsoft Sentinel playbook detects ransomware behavior by monitoring honey
 
 ---
 
-## 🧠 How It Works
+##  How It Works
 
 1. **Trigger**: Analytics rule detects honeypot file activity (rename, extension change, etc.)
 2. **Get Incident Details**: From Sentinel
@@ -16,7 +16,7 @@ This Microsoft Sentinel playbook detects ransomware behavior by monitoring honey
 
 ---
 
-## 🔧 Tools Used
+##  Tools Used
 
 - Microsoft Sentinel (Analytics Rules)
 - Azure Logic Apps (Standard)
@@ -26,7 +26,7 @@ This Microsoft Sentinel playbook detects ransomware behavior by monitoring honey
 
 ---
 
-## 📎 File Structure
+##  File Structure
 
 HoneyTrap-Ransomware/
 ├── logicapp-honeytrap.json ← Logic App (exported JSON)
@@ -35,9 +35,9 @@ HoneyTrap-Ransomware/
 
 
 
-## 📬 Sample Email Sent
+##  Sample Email Sent
 
-🚨 Honeypot File Access Detected
+ Honeypot File Access Detected
 
 Device: WIN-SERVER01
 User: attacker@domain.com
@@ -46,6 +46,6 @@ Action: Detected ransomware behavior.
 Response: SOC Notified
 
 
-## 🔖 GitHub Tags
+##  GitHub Tags
 
 `ransomware-response` `honeytrap` `microsoft-sentinel` `logic-app` `automated-playbook`
