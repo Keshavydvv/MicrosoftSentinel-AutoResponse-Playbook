@@ -2,25 +2,25 @@
 
 This project implements a powerful **unified playbook** in Microsoft Sentinel that automates threat detection and response for:
 
-- 🛡️ **Suspicious IP blocking**
-- 💣 **Honeypot-based ransomware detection**
+-  **Suspicious IP blocking**
+-  **Honeypot-based ransomware detection**
 
 The playbook is built using **Azure Logic Apps**, **Microsoft Defender for Endpoint**, and **Sentinel analytics rules**, helping security teams rapidly detect and mitigate threats — all without human intervention.
 
 ---
 
-## 📌 Core Capabilities
+##  Core Capabilities
 
-- ✅ Detects suspicious activity using Sentinel incidents
-- 🔍 Parses alert entities to extract attacker IPs
-- 🚫 Automatically blocks IPs via Defender Threat Indicators API
-- 🪤 Triggers response when honeypot (decoy) files are accessed/altered
-- 📧 Sends detailed alerts to SOC team
-- 📝 Adds comments and tags to Sentinel incidents for traceability
+-  Detects suspicious activity using Sentinel incidents
+-  Parses alert entities to extract attacker IPs
+-  Automatically blocks IPs via Defender Threat Indicators API
+-  Triggers response when honeypot (decoy) files are accessed/altered
+-  Sends detailed alerts to SOC team
+-  Adds comments and tags to Sentinel incidents for traceability
 
 ---
 
-## 🧰 Technologies Used
+##  Technologies Used
 
 - Microsoft Sentinel
 - Azure Logic Apps (Standard)
@@ -30,7 +30,7 @@ The playbook is built using **Azure Logic Apps**, **Microsoft Defender for Endpo
 
 ---
 
-## 🧠 Unified Workflow Overview
+##  Unified Workflow Overview
 
 Sentinel Alert (IP Threat or Honeypot Access)
 ↓
@@ -54,7 +54,7 @@ Add Comment + Tag Incident
 
 
 
-## 📂 Repo Structure
+##  Repo Structure
 
 Sentinel-Ransomware-IP-AutoResponse-Playbook/
 ├── README.md ← This file
