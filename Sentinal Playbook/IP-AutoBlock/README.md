@@ -4,29 +4,29 @@ This playbook automatically blocks suspicious IP addresses detected by Microsoft
 
 ---
 
-## 🚀 Trigger
+## Trigger
 
 Triggered when a **high/medium severity incident** is created in Microsoft Sentinel.
 
 ---
 
-## 🔧 Workflow Steps
+##  Workflow Steps
 
 1. **Get Incident Info** (from Sentinel)
 2. **Get Entities** (from the incident)
 3. **Loop through entities** and:
-   - ✅ If entity type is `ip`:
+   -  If entity type is `ip`:
      - Block using Defender for Endpoint API
      - Send Email to SOC
      - Add Comment to incident
      - Tag incident: `AutoBlocked`
-   - ❌ Else:
+   -  Else:
      - Append to `SkippedEntities` variable
 4. **(Optional)**: Add a comment to the incident with skipped entities
 
 ---
 
-## 🛡 Technologies Used
+##  Technologies Used
 
 - Microsoft Sentinel
 - Azure Logic Apps (Standard)
@@ -36,7 +36,7 @@ Triggered when a **high/medium severity incident** is created in Microsoft Senti
 
 ---
 
-## 📎 File Structure
+##  File Structure
 
 IP-AutoBlock/
 ├── logicapp-ipblock.json
@@ -45,9 +45,9 @@ IP-AutoBlock/
 
 ---
 
-## 📬 Sample Email Sent
+##  Sample Email Sent
 
-Subject: 🚨 IP Blocked – Sentinel Alert: Brute Force Login
+Subject:  IP Blocked – Sentinel Alert: Brute Force Login
 
 Incident: Brute Force Detected
 Source IP: 185.22.45.10
@@ -56,6 +56,6 @@ Link: View Incident in Sentinel
 
 
 
-## 🔖 GitHub Tags
+##  GitHub Tags
 
 `microsoft-sentinel` `logic-app` `automated-response` `defender` `ip-blocking`
