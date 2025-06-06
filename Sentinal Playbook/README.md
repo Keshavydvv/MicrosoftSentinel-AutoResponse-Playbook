@@ -69,7 +69,7 @@ Sentinel-Ransomware-IP-AutoResponse-Playbook/
 
 
 
-## 🔖 Tags
+##  Tags
 
 `microsoft-sentinel` `logic-app` `defender-for-endpoint` `ransomware-detection` `automated-playbook` `ip-blocking`
 
